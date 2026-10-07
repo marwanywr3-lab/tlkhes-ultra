@@ -1,0 +1,376 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>خلاصة | المنصة الذكية لمراجعة الكتب والمستندات</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            japandi: {
+              bg: '#F7F5F0',        // بيج كريمي هادئ للخلفية الرئيسية
+              card: '#FFFFFF',      // أبيض نقي مع خلفية كريمية
+              cardMuted: '#EFECE6', // لون بطاقة ثانوي هادئ
+              border: '#E5E0D8',    // حدود رقيقة ناعمة
+              sand: '#DFD7CC',      // لون الرمل الدافئ
+              textPrimary: '#2B2824', // لون حبر داكن دافئ
+              textMuted: '#746E65',   // رمادي دافئ خفيف للنصوص الثانوية
+              wood: '#8E6343',      // لمسة خشبية طبيعية للأزرار
+              woodHover: '#775235', // درجة خشبية أغمق عند التمرير
+              woodLight: '#F3EDE6', // خلفية خفيفة جداً من لمسة الخشب
+              sage: '#5E7058',      // لون شاي الماتشا/الأعشاب للمؤشرات الإيجابية
+              sageLight: '#E8ECE6'
+            }
+          },
+          fontFamily: {
+            sans: ['"IBM Plex Sans Arabic"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- PDF.js Engine & Worker -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // تهيئة مسار الـ worker لـ pdf.js
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
+  <!-- Markdown Parser & HTML Sanitizer -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="bg-japandi-bg text-japandi-textPrimary font-sans antialiased min-h-screen flex flex-col selection:bg-japandi-sand selection:text-japandi-textPrimary">
+
+  <header class="sticky top-0 z-30 bg-japandi-bg/90 backdrop-blur-md border-b border-japandi-border transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Logo and Brand -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-japandi-wood flex items-center justify-center text-white shadow-sm">
+          <i data-lucide="book-open-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="font-bold text-lg text-japandi-textPrimary tracking-tight">خُـلاصة</span>
+          <span class="text-xs text-japandi-textMuted mr-2 hidden sm:inline-block font-light">قراءة ومراجعة الكتب الذكية</span>
+        </div>
+      </div>
+
+      <!-- Header Actions: API Key Settings & Status -->
+      <div class="flex items-center gap-3">
+        <button id="open-settings-btn" type="button" class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-japandi-border bg-japandi-card hover:bg-japandi-cardMuted text-japandi-textPrimary transition">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-japandi-wood"></i>
+          <span id="api-status-label">مفتاح API</span>
+        </button>
+
+        <div id="active-model-indicator" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-japandi-woodLight text-japandi-wood font-medium">
+          <span class="w-2 h-2 rounded-full bg-japandi-sage animate-pulse"></span>
+          <span id="header-model-name">gemini-3.8-flash</span>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: DASHBOARD VIEW (الشاشة الأولى) -->
+    <!-- ========================================== -->
+    <section id="dashboard-view" class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 transition-opacity duration-300">
+      
+      <!-- Hero Banner and Action -->
+      <div class="bg-japandi-card border border-japandi-border rounded-2xl p-6 sm:p-8 mb-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="space-y-2 max-w-2xl">
+          <h1 class="text-2xl sm:text-3xl font-bold text-japandi-textPrimary">مرحباً بك في مساحة القراءة الهادئة</h1>
+          <p class="text-sm sm:text-base text-japandi-textMuted leading-relaxed">
+            استخرج الأفكار الجوهرية من الكتب والمستندات الضخمة (حتى مئات الميغابايت) محلياً وبكل خصوصية، ثم حاورها بذكاء اصطناعي فائق السرعة دون عوائق الرفع.
+          </p>
+        </div>
+
+        <div>
+          <button id="create-summary-btn" type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-japandi-wood hover:bg-japandi-woodHover text-white text-sm font-medium transition shadow-sm hover:shadow active:scale-98">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>+ إنشاء ملخص جديد</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Saved Summaries Section -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between border-b border-japandi-border pb-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="library" class="w-5 h-5 text-japandi-wood"></i>
+            <h2 class="text-lg font-semibold text-japandi-textPrimary">الملخصات المحفوظة</h2>
+          </div>
+          <span id="summaries-counter" class="text-xs bg-japandi-cardMuted text-japandi-textMuted px-2.5 py-1 rounded-full font-medium">0 ملخصات</span>
+        </div>
+
+        <!-- Cards Grid Container -->
+        <div id="summaries-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- Dynamic cards injected via storage.js -->
+        </div>
+
+        <!-- Empty State (Shown when no items exist) -->
+        <div id="empty-state" class="text-center py-16 px-4 bg-japandi-card/50 rounded-2xl border border-dashed border-japandi-border flex flex-col items-center justify-center">
+          <div class="w-14 h-14 rounded-2xl bg-japandi-woodLight flex items-center justify-center text-japandi-wood mb-4">
+            <i data-lucide="book-open" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-base font-semibold text-japandi-textPrimary mb-1">لا توجد ملخصات سابقة حتى الآن</h3>
+          <p class="text-xs text-japandi-textMuted max-w-sm mb-5">
+            ابدأ بتلخيص كتابك الأول أو ارفع مستنداً بصيغة PDF لمعالجته صفحة بصفحة داخل المتصفح مباشرة.
+          </p>
+          <button id="empty-create-btn" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-japandi-wood text-white text-xs font-medium hover:bg-japandi-woodHover transition">
+            <i data-lucide="file-plus-2" class="w-4 h-4"></i>
+            <span>ابدأ الآن بتلخيص مستند</span>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: WORKSPACE VIEW (الشاشة الثانية) -->
+    <!-- ========================================== -->
+    <section id="workspace-view" class="hidden flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      
+      <!-- Top Action Bar for Workspace -->
+      <div class="bg-japandi-card border-b border-japandi-border px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <button id="back-to-dashboard-btn" type="button" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-japandi-border hover:bg-japandi-cardMuted text-xs font-medium text-japandi-textPrimary transition">
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>العودة للرئيسية</span>
+          </button>
+          
+          <div class="h-4 w-px bg-japandi-border hidden sm:block"></div>
+          
+          <h2 id="active-document-title" class="text-sm font-semibold text-japandi-textPrimary truncate max-w-[200px] sm:max-w-md">
+            عنوان المستند
+          </h2>
+        </div>
+
+        <!-- Export & Copy Actions -->
+        <div class="flex items-center gap-2">
+          <button id="copy-summary-btn" type="button" title="نسخ النص" class="p-2 sm:px-3 sm:py-1.5 inline-flex items-center gap-1.5 rounded-lg border border-japandi-border hover:bg-japandi-cardMuted text-xs text-japandi-textPrimary transition">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">نسخ</span>
+          </button>
+          <button id="download-summary-btn" type="button" title="تنزيل كملف نصي" class="p-2 sm:px-3 sm:py-1.5 inline-flex items-center gap-1.5 rounded-lg border border-japandi-border hover:bg-japandi-cardMuted text-xs text-japandi-textPrimary transition">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">تنزيل</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dual Split Layout: Summary View & Interactive Chat -->
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+        
+        <!-- Right Column: Executive Summary Markdown (7 Columns on large screens) -->
+        <div class="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-l border-japandi-border overflow-hidden bg-japandi-bg">
+          <div class="px-6 py-3 border-b border-japandi-border bg-japandi-card/50 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2">
+              <i data-lucide="file-text" class="w-4 h-4 text-japandi-wood"></i>
+              <span class="text-xs font-semibold uppercase tracking-wider text-japandi-textPrimary">الملخص التنفيذي للمستند</span>
+            </div>
+            <span class="text-[11px] text-japandi-textMuted bg-japandi-cardMuted px-2 py-0.5 rounded font-mono">Markdown</span>
+          </div>
+
+          <!-- Scrollable Markdown Content Container -->
+          <div id="summary-content" class="flex-1 p-6 sm:p-8 overflow-y-auto prose prose-stone max-w-none text-japandi-textPrimary leading-relaxed text-sm">
+            <!-- Dynamic Markdown compiled output -->
+          </div>
+        </div>
+
+        <!-- Left Column: Context-Aware Interactive AI Chat (5 Columns on large screens) -->
+        <div class="lg:col-span-5 flex flex-col overflow-hidden bg-japandi-card">
+          <div class="px-5 py-3 border-b border-japandi-border bg-japandi-card flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-4 h-4 text-japandi-wood"></i>
+              <span class="text-xs font-semibold text-japandi-textPrimary">محاورة المستند الذكية</span>
+            </div>
+            <button id="clear-chat-btn" type="button" class="text-[11px] text-japandi-textMuted hover:text-red-600 transition">مسح السجل</button>
+          </div>
+
+          <!-- Chat Messages Scrollable Box -->
+          <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4">
+            <!-- Welcome Bot Prompt -->
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-japandi-woodLight flex items-center justify-center shrink-0 text-japandi-wood">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+              </div>
+              <div class="bg-japandi-cardMuted/70 border border-japandi-border rounded-2xl rounded-tr-none px-4 py-3 text-xs leading-relaxed max-w-[85%]">
+                مرحباً! لقد قمت بقراءة المستند بالكامل وأنا جاهز للإجابة على استفساراتك، أو إعادة صياغة أي جزئية، أو التوسع في المفاهيم المذكورة.
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input Controls -->
+          <div class="p-3 border-t border-japandi-border bg-japandi-card">
+            <form id="chat-form" class="flex items-center gap-2">
+              <input 
+                id="chat-input"
+                type="text" 
+                placeholder="اسأل عن أي بند أو اطلب إعادة صياغة..." 
+                class="flex-1 bg-japandi-bg border border-japandi-border rounded-xl px-3.5 py-2.5 text-xs text-japandi-textPrimary placeholder:text-japandi-textMuted focus:outline-none focus:ring-1 focus:ring-japandi-wood"
+                autocomplete="off"
+              />
+              <button 
+                id="send-chat-btn" 
+                type="submit" 
+                class="bg-japandi-wood hover:bg-japandi-woodHover text-white p-2.5 rounded-xl transition shrink-0 flex items-center justify-center">
+                <i data-lucide="send-horizontal" class="w-4 h-4"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <div id="new-summary-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-japandi-card border border-japandi-border rounded-2xl max-w-lg w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-japandi-border mb-4">
+        <h3 class="text-base font-semibold text-japandi-textPrimary flex items-center gap-2">
+          <i data-lucide="file-up" class="w-5 h-5 text-japandi-wood"></i>
+          <span>رفع وتلخيص مستند جديد</span>
+        </h3>
+        <button id="close-summary-modal-btn" type="button" class="text-japandi-textMuted hover:text-japandi-textPrimary p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <!-- File Selector Area -->
+        <div>
+          <label class="block text-xs font-medium text-japandi-textPrimary mb-2">اختر ملف PDF (حتى الكتب الضخمة +100MB)</label>
+          <div id="drop-zone" class="border-2 border-dashed border-japandi-border hover:border-japandi-wood rounded-xl p-6 text-center cursor-pointer transition bg-japandi-bg/50">
+            <input type="file" id="pdf-file-input" accept="application/pdf" class="hidden">
+            <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto text-japandi-wood mb-2"></i>
+            <p id="file-chosen-text" class="text-xs text-japandi-textPrimary font-medium">اضغط لتحديد المستند أو اسحبه هنا</p>
+            <p class="text-[11px] text-japandi-textMuted mt-1">تتم المعالجة صفحة بصفحة داخل المتصفح محلياً</p>
+          </div>
+        </div>
+
+        <!-- Document Custom Title -->
+        <div>
+          <label for="custom-doc-title" class="block text-xs font-medium text-japandi-textPrimary mb-1">عنوان المرجع / الكتاب</label>
+          <input type="text" id="custom-doc-title" placeholder="اختياري (سيتم اعتماد اسم الملف تلقائياً)" class="w-full bg-japandi-bg border border-japandi-border rounded-lg px-3 py-2 text-xs text-japandi-textPrimary focus:outline-none focus:ring-1 focus:ring-japandi-wood">
+        </div>
+
+        <!-- Model Picker for Current Job -->
+        <div>
+          <label class="block text-xs font-medium text-japandi-textPrimary mb-1">نموذج الذكاء الاصطناعي</label>
+          <select id="modal-model-select" class="w-full bg-japandi-bg border border-japandi-border rounded-lg px-3 py-2 text-xs text-japandi-textPrimary focus:outline-none focus:ring-1 focus:ring-japandi-wood">
+            <option value="gemini-3.8-flash">gemini-3.8-flash (الأقوى والأدق)</option>
+            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (الأسرع والأخف)</option>
+          </select>
+        </div>
+
+        <!-- Extraction Progress Bar (Dynamic) -->
+        <div id="extraction-progress-container" class="hidden space-y-2 pt-2 border-t border-japandi-border">
+          <div class="flex justify-between text-xs text-japandi-textPrimary">
+            <span id="extraction-status-text">جاري استخراج النص...</span>
+            <span id="extraction-pages-counter" class="font-mono">صفحة 0 من 0</span>
+          </div>
+          <div class="w-full bg-japandi-cardMuted rounded-full h-2 overflow-hidden">
+            <div id="extraction-progress-bar" class="bg-japandi-wood h-full w-0 transition-all duration-150"></div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end gap-2 pt-4 border-t border-japandi-border">
+          <button id="cancel-extract-btn" type="button" class="px-4 py-2 rounded-lg border border-japandi-border text-xs text-japandi-textPrimary hover:bg-japandi-cardMuted transition">إلغاء</button>
+          <button id="start-summary-btn" type="button" class="px-5 py-2 rounded-lg bg-japandi-wood text-white text-xs font-medium hover:bg-japandi-woodHover transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>بدء الاستخراج والتلخيص</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="api-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-japandi-card border border-japandi-border rounded-2xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-japandi-border mb-4">
+        <h3 class="text-base font-semibold text-japandi-textPrimary flex items-center gap-2">
+          <i data-lucide="settings" class="w-4 h-4 text-japandi-wood"></i>
+          <span>إعدادات Google AI Studio API</span>
+        </h3>
+        <button id="close-api-modal-btn" type="button" class="text-japandi-textMuted hover:text-japandi-textPrimary p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label for="gemini-api-key-input" class="block text-xs font-medium text-japandi-textPrimary mb-1.5">مفتاح API الخاص بك (Google AI Studio)</label>
+          <input 
+            type="password" 
+            id="gemini-api-key-input" 
+            placeholder="AIzaSy..." 
+            class="w-full bg-japandi-bg border border-japandi-border rounded-lg px-3 py-2 text-xs font-mono text-japandi-textPrimary focus:outline-none focus:ring-1 focus:ring-japandi-wood"
+          />
+          <p class="text-[11px] text-japandi-textMuted mt-1">
+            يُحفظ المفتاح محلياً في متصفحك (localStorage) ولا يُرسل لأي خادم وسيط.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-japandi-textPrimary mb-1.5">النموذج الافتراضي</label>
+          <select id="default-model-select" class="w-full bg-japandi-bg border border-japandi-border rounded-lg px-3 py-2 text-xs text-japandi-textPrimary focus:outline-none focus:ring-1 focus:ring-japandi-wood">
+            <option value="gemini-3.8-flash">gemini-3.8-flash (الأفضل جودة وعمقاً)</option>
+            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (أسرع وأخف استهلاكاً)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-4 border-t border-japandi-border">
+          <button id="save-api-key-btn" type="button" class="px-5 py-2 rounded-lg bg-japandi-wood text-white text-xs font-medium hover:bg-japandi-woodHover transition">
+            حفظ الإعدادات
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="pdf-extractor.js"></script>
+  <script src="gemini-api.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
+</body>
+</html>
+```
