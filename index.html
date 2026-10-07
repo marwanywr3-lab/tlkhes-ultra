@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مُلخّص الكتب والمستندات الذكي</title>
+
+  <!-- خط Tajawal لقراءة مريحة ومتناسقة مع النمط الهادئ -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- مكتبة Marked لتنسيق نصوص Markdown القادمة من Gemini -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- مكتبة PDF.js لمعالجة الكتب والملفات الضخمة محلياً في المتصفح -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- ملف التنسيقات الخاص بالمرحلة الثانية -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- الشريط العلوي الثابت -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <span class="brand-icon">📑</span>
+      <h1 class="brand-title">مستند | Mustanad</h1>
+    </div>
+
+    <div class="nav-controls">
+      <div class="control-group">
+        <label for="model-select">النموذج:</label>
+        <select id="model-select" class="custom-select">
+          <option value="gemini-3.8-flash">gemini-3.8-flash</option>
+          <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <input 
+          type="password" 
+          id="api-key-input" 
+          placeholder="أدخل مفتاح Gemini API..." 
+          autocomplete="off"
+        />
+        <button id="save-api-key-btn" class="btn btn-secondary">حفظ المفتاح</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- الشاشة الأولى: لوحة التحكم الرئيسية -->
+    <section id="dashboard-view" class="view-panel active-view">
+      <div class="dashboard-hero">
+        <div class="hero-text">
+          <h2>قراءة ذكية وموجزة للكتب والمستندات الضخمة</h2>
+          <p>استخرج الملخصات التنفيذية وحاور مراجعك المعقدة دون قيود على الحجم وبأمان تام.</p>
+        </div>
+        
+        <div class="upload-zone">
+          <input type="file" id="pdf-file-input" accept="application/pdf" hidden>
+          <button id="trigger-upload-btn" class="btn btn-primary btn-large">
+            <span class="icon">+</span> إنشاء ملخص جديد
+          </button>
+          <span class="upload-note">يدعم ملفات PDF الكبيرة (حتى 100MB+) عبر المعالجة المباشرة في المتصفح</span>
+        </div>
+      </div>
+
+      <div class="dashboard-content">
+        <div class="section-header">
+          <h3>الملخصات المحفوظة</h3>
+          <span id="saved-count-badge" class="count-badge">0 ملخص</span>
+        </div>
+        
+        <!-- شبكة عرض الكروت المحفوظة -->
+        <div id="cards-grid" class="cards-grid">
+          <!-- يتم ملء الكروت ديناميكياً من التخزين المحلي -->
+        </div>
+
+        <div id="empty-state" class="empty-state">
+          <p>لا توجد ملخصات محفوظة حتى الآن. ابدأ برفع مستندك الأول!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- نافذة شريط التقدم للمعالجة الدفعية للمستندات الكبيرة -->
+    <div id="progress-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="spinner"></div>
+        <h4 id="progress-status-title">جاري تهيئة المستند...</h4>
+        <div class="progress-bar-wrapper">
+          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="page-counter-text">جاري فحص الصفحات...</span>
+          <span id="percentage-text">0%</span>
+        </div>
+        <p class="progress-hint">تتم قراءة المستند واستخراج النصوص صفحة بصفحة داخل جهازك للحفاظ على استقرار المتصفح.</p>
+      </div>
+    </div>
+
+    <!-- الشاشة الثانية: مساحة العمل والمحاورة -->
+    <section id="workspace-view" class="view-panel hidden">
+      <div class="workspace-header">
+        <div class="doc-info">
+          <button id="back-to-dashboard-btn" class="btn btn-secondary">
+            ← العودة للرئيسية
+          </button>
+          <h2 id="workspace-doc-title" class="doc-title">عنوان المستند</h2>
+        </div>
+
+        <div class="workspace-actions">
+          <button id="copy-summary-btn" class="btn btn-outline" title="نسخ إلى الحافظة">نسخ الملخص</button>
+          <button id="download-summary-btn" class="btn btn-outline" title="تنزيل كملف نصي">تنزيل Markdown</button>
+        </div>
+      </div>
+
+      <!-- مساحة العمل المنقسمة -->
+      <div class="workspace-grid">
+        <!-- القسم الأيمن: عرض الملخص التنفيذي -->
+        <article class="summary-pane">
+          <div class="pane-header">
+            <h3>الملخص التنفيذي</h3>
+          </div>
+          <div id="summary-content" class="markdown-body">
+            <!-- يُدرج الملخص التنفيذي المنسق هنا عبر Marked -->
+          </div>
+        </article>
+
+        <!-- القسم الأيسر: الشات التفاعلي مع المستند -->
+        <aside class="chat-pane">
+          <div class="pane-header">
+            <h3>محاورة المستند</h3>
+            <span class="chat-badge">سياق كامل</span>
+          </div>
+
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-bubble ai">
+              مرحباً بك! لقد استوعبت محتوى هذا المستند بالكامل. يمكنك سؤالي عن أي تفصيل، طلب أمثلة، أو إعادة صياغة أي محور.
+            </div>
+          </div>
+
+          <form id="chat-form" class="chat-form">
+            <input 
+              type="text" 
+              id="chat-input" 
+              placeholder="اطرح سؤالاً حول هذا المستند..." 
+              autocomplete="off" 
+              required
+            />
+            <button type="submit" id="send-chat-btn" class="btn btn-primary">إرسال</button>
+          </form>
+        </aside>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ملف المنطق البرمجي الخاص بالمرحلة الثالثة -->
+  <script src="app.js"></script>
+</body>
+</html>
